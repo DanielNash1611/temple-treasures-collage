@@ -236,16 +236,49 @@ function PromptCard({
           }}
         />
 
-        <div className="mt-4 flex gap-2">
+        <div className="mt-4 flex flex-wrap gap-2">
           <button
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
-            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-60"
+            className="flex flex-1 min-w-[160px] items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-60"
           >
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-            {submission ? "Replace photo" : "Take / upload photo"}
+            {submission ? "Replace" : "Take / upload photo"}
           </button>
+          {submission && (
+            <>
+              <button
+                onClick={async () => {
+                  try {
+                    await downloadFromUrl(submission.photo_url, `${prompt.title.replace(/\s+/g, "-")}.jpg`);
+                  } catch (e: any) { toast.error(e.message || "Download failed"); }
+                }}
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-secondary px-3 py-2.5 text-sm font-medium text-secondary-foreground"
+                aria-label="Download photo"
+              >
+                <Download className="h-4 w-4" /> Download
+              </button>
+              <button
+                onClick={async () => {
+                  if (!confirm(`Delete the photo for "${prompt.title}"? This can't be undone.`)) return;
+                  try {
+                    const path = storagePathFromUrl(submission.photo_url);
+                    const { error } = await supabase.from("submissions").delete().eq("id", submission.id);
+                    if (error) throw error;
+                    if (path) await supabase.storage.from("photos").remove([path]);
+                    toast.success("Photo deleted");
+                    onChanged();
+                  } catch (e: any) { toast.error(e.message || "Delete failed"); }
+                }}
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-destructive/10 px-3 py-2.5 text-sm font-medium text-destructive"
+                aria-label="Delete photo"
+              >
+                <Trash2 className="h-4 w-4" /> Delete
+              </button>
+            </>
+          )}
         </div>
+
 
         {submission && (
           <div className="mt-3">
