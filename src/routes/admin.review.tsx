@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Family, Prompt, ReviewStatus, Submission } from "@/lib/types";
 import { toast } from "sonner";
-import { Check, X, Trash2 } from "lucide-react";
+import { Check, X, Trash2, Download } from "lucide-react";
+import { downloadFromUrl, storagePathFromUrl } from "@/lib/collage";
 
 export const Route = createFileRoute("/admin/review")({ component: Review });
 
@@ -40,10 +41,18 @@ function Review() {
     const { error } = await supabase.from("submissions").update(patch).eq("id", id);
     if (error) toast.error(error.message); else { load(); }
   };
-  const remove = async (id: string) => {
-    if (!confirm("Delete this submission?")) return;
-    await supabase.from("submissions").delete().eq("id", id);
+  const remove = async (id: string, url: string) => {
+    if (!confirm("Permanently delete this submission? This removes the photo from storage and any collage.")) return;
+    const path = storagePathFromUrl(url);
+    const { error } = await supabase.from("submissions").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    if (path) await supabase.storage.from("photos").remove([path]);
+    toast.success("Deleted");
     load();
+  };
+  const download = async (url: string, name: string) => {
+    try { await downloadFromUrl(url, `${name.replace(/\s+/g, "-")}.jpg`); }
+    catch (e: any) { toast.error(e.message || "Download failed"); }
   };
 
   return (
@@ -89,7 +98,10 @@ function Review() {
                 >
                   <X className="h-3.5 w-3.5" /> Reject
                 </button>
-                <button onClick={() => remove(s.id)} className="rounded-lg bg-muted p-1.5 text-destructive">
+                <button onClick={() => download(s.photo_url, `${famName(s.family_id)}-${promptTitle(s.prompt_id)}`)} className="rounded-lg bg-muted p-1.5 text-foreground" aria-label="Download">
+                  <Download className="h-3.5 w-3.5" />
+                </button>
+                <button onClick={() => remove(s.id, s.photo_url)} className="rounded-lg bg-muted p-1.5 text-destructive" aria-label="Delete">
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>

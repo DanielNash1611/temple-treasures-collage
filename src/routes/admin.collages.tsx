@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Family, Submission } from "@/lib/types";
 import { renderFamilyCollage, renderCombinedCollage, downloadBlob } from "@/lib/collage";
 import { toast } from "sonner";
-import { Download, Loader2, Sparkles } from "lucide-react";
+import { Download, Image as ImageIcon, Loader2, Sparkles, X } from "lucide-react";
 
 export const Route = createFileRoute("/admin/collages")({ component: Collages });
 
@@ -13,6 +13,8 @@ function Collages() {
   const [subs, setSubs] = useState<Submission[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [referenceUrl, setReferenceUrl] = useState<string | null>(null);
+  const refFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     (async () => {
@@ -46,21 +48,29 @@ function Collages() {
     if (combinedPhotos.length === 0) { toast.error("No approved photos available."); return; }
     setBusy("combined");
     try {
-      const blob = await renderCombinedCollage(combinedPhotos);
+      const blob = await renderCombinedCollage(combinedPhotos, {
+        referenceImageUrl: referenceUrl,
+      });
       setPreview(URL.createObjectURL(blob));
       downloadBlob(blob, "temple-trip-combined.png");
     } catch (e: any) { toast.error(e.message); }
     finally { setBusy(null); }
   };
 
+  const onPickReference = (file: File) => {
+    const url = URL.createObjectURL(file);
+    setReferenceUrl(url);
+    toast.success("Reference image loaded — it will guide the silhouette.");
+  };
+
   return (
     <div className="space-y-6">
-      <section className="temple-card p-5">
+      <section className="temple-card p-5 space-y-4">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <h2 className="font-serif text-xl text-primary">Combined temple collage</h2>
             <p className="text-sm text-muted-foreground">
-              {combinedPhotos.length} approved photos · arranged in a temple silhouette
+              {combinedPhotos.length} approved photos · LA Temple silhouette with Moroni topper
             </p>
           </div>
           <button
@@ -71,6 +81,45 @@ function Collages() {
             {busy === "combined" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
             Generate & download
           </button>
+        </div>
+
+        <div className="rounded-lg border border-dashed border-border bg-muted/40 p-3 text-sm">
+          <p className="font-medium text-foreground">Optional: silhouette reference image</p>
+          <p className="text-xs text-muted-foreground">
+            Upload a photo or outline of the Los Angeles Temple. It won't appear in the collage —
+            it's used to shape the silhouette where photos are tiled. If skipped, the built-in
+            LA Temple template is used.
+          </p>
+          <input
+            ref={refFileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) onPickReference(f);
+              e.target.value = "";
+            }}
+          />
+          <div className="mt-2 flex items-center gap-2">
+            <button
+              onClick={() => refFileRef.current?.click()}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-sm font-medium text-secondary-foreground"
+            >
+              <ImageIcon className="h-4 w-4" /> {referenceUrl ? "Replace reference" : "Upload reference"}
+            </button>
+            {referenceUrl && (
+              <>
+                <img src={referenceUrl} alt="" className="h-10 w-16 rounded object-cover" />
+                <button
+                  onClick={() => setReferenceUrl(null)}
+                  className="inline-flex items-center gap-1 rounded-lg bg-muted px-2 py-1 text-xs"
+                >
+                  <X className="h-3 w-3" /> Clear
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </section>
 
