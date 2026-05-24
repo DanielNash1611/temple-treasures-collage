@@ -14,16 +14,186 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      collages: {
+        Row: {
+          collage_url: string | null
+          created_at: string
+          family_id: string | null
+          id: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          collage_url?: string | null
+          created_at?: string
+          family_id?: string | null
+          id?: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          collage_url?: string | null
+          created_at?: string
+          family_id?: string | null
+          id?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collages_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      families: {
+        Row: {
+          access_code: string
+          created_at: string
+          family_name: string
+          id: string
+        }
+        Insert: {
+          access_code: string
+          created_at?: string
+          family_name: string
+          id?: string
+        }
+        Update: {
+          access_code?: string
+          created_at?: string
+          family_name?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      prompts: {
+        Row: {
+          created_at: string
+          helper_text: string | null
+          id: string
+          instruction: string
+          is_bonus: boolean
+          location_category: string | null
+          required: boolean
+          sort_order: number
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          helper_text?: string | null
+          id?: string
+          instruction: string
+          is_bonus?: boolean
+          location_category?: string | null
+          required?: boolean
+          sort_order?: number
+          title: string
+        }
+        Update: {
+          created_at?: string
+          helper_text?: string | null
+          id?: string
+          instruction?: string
+          is_bonus?: boolean
+          location_category?: string | null
+          required?: boolean
+          sort_order?: number
+          title?: string
+        }
+        Relationships: []
+      }
+      submissions: {
+        Row: {
+          caption: string | null
+          created_at: string
+          family_id: string
+          id: string
+          include_in_combined_collage: boolean
+          include_in_family_collage: boolean
+          photo_url: string
+          prompt_id: string
+          review_status: Database["public"]["Enums"]["review_status"]
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          family_id: string
+          id?: string
+          include_in_combined_collage?: boolean
+          include_in_family_collage?: boolean
+          photo_url: string
+          prompt_id: string
+          review_status?: Database["public"]["Enums"]["review_status"]
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          family_id?: string
+          id?: string
+          include_in_combined_collage?: boolean
+          include_in_family_collage?: boolean
+          photo_url?: string
+          prompt_id?: string
+          review_status?: Database["public"]["Enums"]["review_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submissions_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submissions_prompt_id_fkey"
+            columns: ["prompt_id"]
+            isOneToOne: false
+            referencedRelation: "prompts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin"
+      review_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +320,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin"],
+      review_status: ["pending", "approved", "rejected"],
+    },
   },
 } as const
