@@ -1,4 +1,5 @@
 // Collage generation utilities — pure canvas, no external deps.
+// LA Temple silhouette + optional reference-image-derived mask.
 
 export async function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -13,6 +14,7 @@ export async function loadImage(src: string): Promise<HTMLImageElement> {
 const CREAM = "#F2E3D5";
 const TEAL = "#2C4F52";
 const GOLD = "#DBBF96";
+const GOLD_DEEP = "#B8975F";
 const ORANGE = "#D17A5F";
 const SLATE = "#3A3D40";
 
@@ -22,7 +24,6 @@ function drawTextureBg(ctx: CanvasRenderingContext2D, w: number, h: number) {
   g.addColorStop(1, "#EAD9C2");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, w, h);
-  // subtle radial light
   const r = ctx.createRadialGradient(w / 2, h * 0.3, 50, w / 2, h * 0.3, w * 0.8);
   r.addColorStop(0, "rgba(255,255,255,0.35)");
   r.addColorStop(1, "rgba(255,255,255,0)");
@@ -32,13 +33,13 @@ function drawTextureBg(ctx: CanvasRenderingContext2D, w: number, h: number) {
 
 function drawOrnament(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number) {
   ctx.save();
-  ctx.strokeStyle = GOLD;
+  ctx.strokeStyle = GOLD_DEEP;
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.moveTo(cx - size, cy);
   ctx.lineTo(cx + size, cy);
   ctx.stroke();
-  ctx.fillStyle = GOLD;
+  ctx.fillStyle = GOLD_DEEP;
   ctx.beginPath();
   ctx.arc(cx, cy, 3, 0, Math.PI * 2);
   ctx.fill();
@@ -73,6 +74,8 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.closePath();
 }
 
+// ============ Family collage ============
+
 export async function renderFamilyCollage(opts: {
   familyName: string;
   photoUrls: string[];
@@ -83,15 +86,13 @@ export async function renderFamilyCollage(opts: {
   const ctx = canvas.getContext("2d")!;
   drawTextureBg(ctx, W, H);
 
-  // Inner border frame
-  ctx.strokeStyle = GOLD;
+  ctx.strokeStyle = GOLD_DEEP;
   ctx.lineWidth = 3;
   ctx.strokeRect(40, 40, W - 80, H - 80);
   ctx.strokeStyle = TEAL;
   ctx.lineWidth = 1;
   ctx.strokeRect(54, 54, W - 108, H - 108);
 
-  // Title
   ctx.fillStyle = TEAL;
   ctx.textAlign = "center";
   ctx.font = "italic 36px 'Cormorant Garamond', Georgia, serif";
@@ -103,7 +104,6 @@ export async function renderFamilyCollage(opts: {
   ctx.font = "500 18px Inter, sans-serif";
   ctx.fillText("June 20, 2026", W / 2, 260);
 
-  // Photo grid area
   const gridTop = 310;
   const gridLeft = 90;
   const gridRight = W - 90;
@@ -116,7 +116,6 @@ export async function renderFamilyCollage(opts: {
   const valid = imgs.filter((i): i is HTMLImageElement => !!i);
 
   const n = valid.length;
-  // pick a tidy grid
   let cols = 2, rows = Math.ceil(n / 2);
   if (n >= 7) { cols = 3; rows = Math.ceil(n / 3); }
   if (n <= 3) { cols = 1; rows = n; }
@@ -134,7 +133,6 @@ export async function renderFamilyCollage(opts: {
       const rIdx = Math.floor(i / cols);
       const x = gridLeft + cIdx * (cw + gap);
       const y = gridTop + rIdx * (ch + gap);
-      // shadow
       ctx.save();
       ctx.shadowColor = "rgba(58,61,64,0.25)";
       ctx.shadowBlur = 14;
@@ -143,7 +141,6 @@ export async function renderFamilyCollage(opts: {
       roundRect(ctx, x, y, cw, ch, 14);
       ctx.fill();
       ctx.restore();
-      // image clipped
       ctx.save();
       roundRect(ctx, x + 8, y + 8, cw - 16, ch - 16, 10);
       ctx.clip();
@@ -152,7 +149,6 @@ export async function renderFamilyCollage(opts: {
     });
   }
 
-  // Footer
   drawOrnament(ctx, W / 2, H - 130, 120);
   ctx.fillStyle = TEAL;
   ctx.font = "italic 28px 'Cormorant Garamond', Georgia, serif";
@@ -164,33 +160,162 @@ export async function renderFamilyCollage(opts: {
   return await new Promise<Blob>((res) => canvas.toBlob((b) => res(b!), "image/png"));
 }
 
-// ----- Temple silhouette mask -----
-// Returns true if point (x,y) in [0..1] x [0..1] is inside silhouette.
-function inTemple(nx: number, ny: number): boolean {
-  // base rectangle
-  if (ny >= 0.55 && ny <= 0.92 && nx >= 0.12 && nx <= 0.88) return true;
-  // steps below
-  if (ny > 0.92 && ny <= 0.96 && nx >= 0.08 && nx <= 0.92) return true;
-  // side wings (lower, narrower)
-  if (ny >= 0.62 && ny <= 0.85 && (nx < 0.12 && nx >= 0.04)) return true;
-  if (ny >= 0.62 && ny <= 0.85 && (nx > 0.88 && nx <= 0.96)) return true;
-  // center tower
-  if (ny >= 0.28 && ny < 0.55 && nx >= 0.40 && nx <= 0.60) return true;
-  // spire (triangle)
-  if (ny >= 0.10 && ny < 0.28) {
-    const t = (ny - 0.10) / (0.28 - 0.10); // 0 top -> 1 bottom
-    const half = 0.04 + t * 0.06; // widens from 0.04 to 0.10
-    if (nx >= 0.5 - half && nx <= 0.5 + half) return true;
-  }
-  // side towers (small) on top of base
-  if (ny >= 0.42 && ny < 0.55) {
-    if (nx >= 0.20 && nx <= 0.30) return true;
-    if (nx >= 0.70 && nx <= 0.80) return true;
+// ============ LA Temple silhouette ============
+// Coordinate space: nx,ny in [0..1] x [0..1]. Origin top-left.
+// Designed to evoke the Los Angeles California Temple: broad stepped base,
+// flanking wings, central body with stepped tower, tall slender spire.
+
+type Rect = { x0: number; x1: number; y0: number; y1: number };
+
+const LA_TEMPLE_RECTS: Rect[] = [
+  // ===== ground steps / plinth =====
+  { x0: 0.04, x1: 0.96, y0: 0.93, y1: 0.965 },
+  { x0: 0.08, x1: 0.92, y0: 0.905, y1: 0.93 },
+
+  // ===== broad base (full width) =====
+  { x0: 0.10, x1: 0.90, y0: 0.78, y1: 0.905 },
+
+  // ===== outer wings (lower & shorter) =====
+  { x0: 0.10, x1: 0.22, y0: 0.70, y1: 0.78 },
+  { x0: 0.78, x1: 0.90, y0: 0.70, y1: 0.78 },
+
+  // ===== inner wing blocks (taller than outer) =====
+  { x0: 0.22, x1: 0.34, y0: 0.62, y1: 0.78 },
+  { x0: 0.66, x1: 0.78, y0: 0.62, y1: 0.78 },
+
+  // ===== central body (broad) =====
+  { x0: 0.34, x1: 0.66, y0: 0.50, y1: 0.78 },
+
+  // ===== central tower step 1 =====
+  { x0: 0.38, x1: 0.62, y0: 0.42, y1: 0.50 },
+
+  // ===== central tower step 2 (stepped in) =====
+  { x0: 0.41, x1: 0.59, y0: 0.34, y1: 0.42 },
+
+  // ===== tower cap / belfry =====
+  { x0: 0.43, x1: 0.57, y0: 0.28, y1: 0.34 },
+
+  // ===== spire base =====
+  { x0: 0.46, x1: 0.54, y0: 0.22, y1: 0.28 },
+
+  // ===== spire shaft (narrow) =====
+  { x0: 0.475, x1: 0.525, y0: 0.12, y1: 0.22 },
+
+  // ===== spire tip (narrower) =====
+  { x0: 0.485, x1: 0.515, y0: 0.07, y1: 0.12 },
+];
+
+function inLATempleRects(nx: number, ny: number): boolean {
+  for (const r of LA_TEMPLE_RECTS) {
+    if (nx >= r.x0 && nx <= r.x1 && ny >= r.y0 && ny <= r.y1) return true;
   }
   return false;
 }
 
-export async function renderCombinedCollage(photoUrls: string[]): Promise<Blob> {
+// Build a mask the size of the temple area. Either from rect template
+// or from a uploaded reference image (luminance threshold).
+async function buildMask(
+  width: number,
+  height: number,
+  referenceUrl: string | null,
+): Promise<Uint8Array> {
+  const mask = new Uint8Array(width * height);
+
+  if (referenceUrl) {
+    try {
+      const img = await loadImage(referenceUrl);
+      const off = document.createElement("canvas");
+      off.width = width; off.height = height;
+      const octx = off.getContext("2d")!;
+      // fit (contain) so silhouette is preserved
+      const ir = img.width / img.height;
+      const tr = width / height;
+      let dw = width, dh = height, dx = 0, dy = 0;
+      if (ir > tr) { dh = width / ir; dy = (height - dh) / 2; }
+      else { dw = height * ir; dx = (width - dw) / 2; }
+      octx.fillStyle = "#ffffff";
+      octx.fillRect(0, 0, width, height);
+      octx.drawImage(img, dx, dy, dw, dh);
+      const data = octx.getImageData(0, 0, width, height).data;
+      // Pixels that are clearly "temple" (lighter beige) vs sky / grass.
+      // Simple heuristic: not strongly blue (sky) and not strongly green (grass)
+      // and lighter than ~0.35 luminance.
+      for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+        const r = data[i], g = data[i + 1], b = data[i + 2];
+        const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        const isSky = b > r + 15 && b > g + 5 && lum > 0.55;
+        const isGrass = g > r + 10 && g > b + 10;
+        if (!isSky && !isGrass && lum > 0.30 && lum < 0.95) mask[p] = 1;
+      }
+      // If reference produced almost-empty mask, fall back to rects.
+      let count = 0;
+      for (let i = 0; i < mask.length; i++) if (mask[i]) count++;
+      if (count > width * height * 0.05) return mask;
+    } catch {
+      // fall through to rects
+    }
+  }
+
+  // Fallback: rect template
+  for (let y = 0; y < height; y++) {
+    const ny = y / height;
+    for (let x = 0; x < width; x++) {
+      const nx = x / width;
+      if (inLATempleRects(nx, ny)) mask[y * width + x] = 1;
+    }
+  }
+  return mask;
+}
+
+function drawMoroni(ctx: CanvasRenderingContext2D, cx: number, cy: number, h: number) {
+  // Simple stylised angel Moroni silhouette: body + horn, in warm gold.
+  ctx.save();
+  ctx.fillStyle = GOLD_DEEP;
+  ctx.strokeStyle = GOLD_DEEP;
+  ctx.lineWidth = Math.max(1, h * 0.06);
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  const w = h * 0.55;
+  // Pedestal ball
+  ctx.beginPath();
+  ctx.arc(cx, cy + h * 0.5, h * 0.10, 0, Math.PI * 2);
+  ctx.fill();
+  // Body (slim oval/figure)
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + h * 0.18, w * 0.18, h * 0.30, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Head
+  ctx.beginPath();
+  ctx.arc(cx, cy - h * 0.18, h * 0.09, 0, Math.PI * 2);
+  ctx.fill();
+  // Outstretched arm holding horn (to figure's left, viewer's right)
+  ctx.beginPath();
+  ctx.moveTo(cx + w * 0.05, cy);
+  ctx.lineTo(cx + w * 0.55, cy - h * 0.18);
+  ctx.stroke();
+  // Horn (trumpet)
+  ctx.beginPath();
+  ctx.moveTo(cx + w * 0.55, cy - h * 0.18);
+  ctx.lineTo(cx + w * 0.80, cy - h * 0.28);
+  ctx.lineTo(cx + w * 0.80, cy - h * 0.10);
+  ctx.closePath();
+  ctx.fill();
+  // Robe flare (back)
+  ctx.beginPath();
+  ctx.moveTo(cx - w * 0.05, cy);
+  ctx.quadraticCurveTo(cx - w * 0.45, cy + h * 0.15, cx - w * 0.20, cy + h * 0.45);
+  ctx.lineTo(cx, cy + h * 0.40);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+}
+
+export async function renderCombinedCollage(
+  photoUrls: string[],
+  options?: { referenceImageUrl?: string | null; familyHighlightUrls?: string[] },
+): Promise<Blob> {
   const W = 1600, H = 2000;
   const canvas = document.createElement("canvas");
   canvas.width = W; canvas.height = H;
@@ -202,89 +327,114 @@ export async function renderCombinedCollage(photoUrls: string[]): Promise<Blob> 
   ctx.textAlign = "center";
   ctx.font = "italic 40px 'Cormorant Garamond', Georgia, serif";
   ctx.fillText("Primary Temple Trip", W / 2, 110);
-  ctx.font = "600 30px 'Cormorant Garamond', Georgia, serif";
+  ctx.font = "600 34px 'Cormorant Garamond', Georgia, serif";
   ctx.fillText("Families Can Be Together Forever", W / 2, 160);
+  drawOrnament(ctx, W / 2, 188, 140);
   ctx.fillStyle = SLATE;
   ctx.font = "500 20px Inter, sans-serif";
-  ctx.fillText("June 20, 2026", W / 2, 195);
+  ctx.fillText("June 20, 2026", W / 2, 215);
 
-  // Temple shape area
-  const top = 230;
-  const left = 80;
-  const right = W - 80;
-  const bottom = H - 100;
+  // Temple area
+  const top = 245;
+  const left = 100;
+  const right = W - 100;
+  const bottom = H - 90;
   const tw = right - left;
   const th = bottom - top;
 
-  // Build tile list inside silhouette
-  const tile = 64;
+  // Build a low-res mask (one cell per tile) of the temple silhouette.
+  const tile = 42;            // smaller tile → more detail
   const cols = Math.floor(tw / tile);
   const rows = Math.floor(th / tile);
-  const cells: { x: number; y: number }[] = [];
+  const mask = await buildMask(cols, rows, options?.referenceImageUrl ?? null);
+
+  // Collect cells inside silhouette
+  type Cell = { c: number; r: number; x: number; y: number; prominence: number };
+  const cells: Cell[] = [];
+  const cxN = cols / 2;
+  const cyN = rows * 0.55; // body center
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      const nx = (c + 0.5) / cols;
-      const ny = (r + 0.5) / rows;
-      if (inTemple(nx, ny)) {
-        cells.push({ x: left + c * tile, y: top + r * tile });
-      }
+      if (!mask[r * cols + c]) continue;
+      // Prominence: closer to vertical axis & near spire = more prominent.
+      // We'll boost prominence for the central column and upper-body areas.
+      const dx = (c - cxN) / cols;
+      const dy = (r - cyN) / rows;
+      const centerDist = Math.sqrt(dx * dx + dy * dy);
+      const prominence = 1 - Math.min(1, centerDist * 1.6);
+      cells.push({ c, r, x: left + c * tile, y: top + r * tile, prominence });
     }
   }
 
-  // Backdrop silhouette (gold halo behind)
+  // Soft silhouette backdrop (golden halo)
   ctx.save();
-  ctx.fillStyle = "rgba(219,191,150,0.35)";
-  cells.forEach((c) => ctx.fillRect(c.x - 2, c.y - 2, tile + 4, tile + 4));
+  ctx.fillStyle = "rgba(219,191,150,0.30)";
+  cells.forEach((c) => ctx.fillRect(c.x - 1, c.y - 1, tile + 2, tile + 2));
+  // soft outer glow
+  ctx.shadowColor = "rgba(184,151,95,0.35)";
+  ctx.shadowBlur = 24;
+  cells.forEach((c) => ctx.fillRect(c.x, c.y, tile, tile));
   ctx.restore();
 
-  if (photoUrls.length === 0) {
-    ctx.fillStyle = TEAL;
-    cells.forEach((c) => ctx.fillRect(c.x + 4, c.y + 4, tile - 8, tile - 8));
-  } else {
-    const imgs: HTMLImageElement[] = [];
-    for (const u of photoUrls) {
-      try { imgs.push(await loadImage(u)); } catch {}
-    }
-    if (imgs.length === 0) {
-      ctx.fillStyle = TEAL;
-      cells.forEach((c) => ctx.fillRect(c.x + 4, c.y + 4, tile - 8, tile - 8));
-    } else {
-      cells.forEach((c, i) => {
-        const img = imgs[i % imgs.length];
-        ctx.save();
-        roundRect(ctx, c.x + 2, c.y + 2, tile - 4, tile - 4, 6);
-        ctx.clip();
-        drawImageCover(ctx, img, c.x + 2, c.y + 2, tile - 4, tile - 4);
-        ctx.restore();
-      });
-    }
+  // Load photos
+  const imgs: HTMLImageElement[] = [];
+  for (const u of photoUrls) {
+    try { imgs.push(await loadImage(u)); } catch {}
+  }
+  const highlights: HTMLImageElement[] = [];
+  for (const u of options?.familyHighlightUrls ?? []) {
+    try { highlights.push(await loadImage(u)); } catch {}
   }
 
-  // subtle outline around silhouette: paint cells border by detecting edges
-  ctx.strokeStyle = "rgba(44,79,82,0.5)";
+  if (imgs.length === 0 && highlights.length === 0) {
+    ctx.fillStyle = TEAL;
+    cells.forEach((c) => ctx.fillRect(c.x + 3, c.y + 3, tile - 6, tile - 6));
+  } else {
+    // Sort cells by prominence (high → low). Most prominent cells get highlights,
+    // then balanced distribution of remaining photos.
+    const sorted = [...cells].sort((a, b) => b.prominence - a.prominence);
+    const pool = highlights.length > 0
+      ? [...highlights, ...imgs]
+      : imgs.length > 0 ? imgs : highlights;
+
+    sorted.forEach((cell, i) => {
+      const img = pool[i % pool.length];
+      ctx.save();
+      roundRect(ctx, cell.x + 2, cell.y + 2, tile - 4, tile - 4, 5);
+      ctx.clip();
+      drawImageCover(ctx, img, cell.x + 2, cell.y + 2, tile - 4, tile - 4);
+      ctx.restore();
+    });
+  }
+
+  // Outline silhouette edges
+  ctx.strokeStyle = "rgba(44,79,82,0.55)";
   ctx.lineWidth = 1.5;
-  cells.forEach((c) => {
-    // draw edges that don't have neighbor cells
-    const neighbors = {
-      top: cells.some((o) => o.x === c.x && o.y === c.y - tile),
-      bottom: cells.some((o) => o.x === c.x && o.y === c.y + tile),
-      left: cells.some((o) => o.x === c.x - tile && o.y === c.y),
-      right: cells.some((o) => o.x === c.x + tile && o.y === c.y),
-    };
+  const has = (c: number, r: number) =>
+    c >= 0 && r >= 0 && c < cols && r < rows && mask[r * cols + c] === 1;
+  cells.forEach(({ c, r, x, y }) => {
     ctx.beginPath();
-    if (!neighbors.top) { ctx.moveTo(c.x, c.y); ctx.lineTo(c.x + tile, c.y); }
-    if (!neighbors.bottom) { ctx.moveTo(c.x, c.y + tile); ctx.lineTo(c.x + tile, c.y + tile); }
-    if (!neighbors.left) { ctx.moveTo(c.x, c.y); ctx.lineTo(c.x, c.y + tile); }
-    if (!neighbors.right) { ctx.moveTo(c.x + tile, c.y); ctx.lineTo(c.x + tile, c.y + tile); }
+    if (!has(c, r - 1)) { ctx.moveTo(x, y); ctx.lineTo(x + tile, y); }
+    if (!has(c, r + 1)) { ctx.moveTo(x, y + tile); ctx.lineTo(x + tile, y + tile); }
+    if (!has(c - 1, r)) { ctx.moveTo(x, y); ctx.lineTo(x, y + tile); }
+    if (!has(c + 1, r)) { ctx.moveTo(x + tile, y); ctx.lineTo(x + tile, y + tile); }
     ctx.stroke();
   });
 
-  // ornament at top of spire
-  ctx.fillStyle = GOLD;
-  ctx.beginPath();
-  ctx.arc(W / 2, top + 0.10 * th - 8, 10, 0, Math.PI * 2);
-  ctx.fill();
+  // Find spire-tip cell (topmost filled cell, central column)
+  let tipR = rows, tipC = Math.floor(cols / 2);
+  for (let r = 0; r < rows; r++) {
+    for (let c = Math.floor(cols * 0.4); c < Math.ceil(cols * 0.6); c++) {
+      if (mask[r * cols + c]) { tipR = r; tipC = c; r = rows; break; }
+    }
+  }
+  const tipX = left + (tipC + 0.5) * tile;
+  const tipY = top + tipR * tile;
 
+  // Angel Moroni topper above spire
+  drawMoroni(ctx, tipX, tipY - 50, 70);
+
+  // Footer ornament
   drawOrnament(ctx, W / 2, H - 50, 200);
 
   return await new Promise<Blob>((res) => canvas.toBlob((b) => res(b!), "image/png"));
@@ -296,4 +446,16 @@ export function downloadBlob(blob: Blob, filename: string) {
   a.href = url; a.download = filename;
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
+}
+
+export async function downloadFromUrl(url: string, filename: string) {
+  const res = await fetch(url);
+  const blob = await res.blob();
+  downloadBlob(blob, filename);
+}
+
+// Extract storage path from a public URL (everything after /photos/)
+export function storagePathFromUrl(url: string): string | null {
+  const m = url.match(/\/photos\/(.+)$/);
+  return m ? m[1] : null;
 }
