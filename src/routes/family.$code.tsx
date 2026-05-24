@@ -1,0 +1,264 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { uploadPhoto } from "@/lib/storage";
+import type { Family, Prompt, Submission } from "@/lib/types";
+import { toast } from "sonner";
+import { Camera, Check, Loader2, Sparkles } from "lucide-react";
+
+export const Route = createFileRoute("/family/$code")({ component: FamilyHunt });
+
+function FamilyHunt() {
+  const { code } = Route.useParams();
+  const [family, setFamily] = useState<Family | null>(null);
+  const [prompts, setPrompts] = useState<Prompt[]>([]);
+  const [subs, setSubs] = useState<Submission[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const refresh = async (familyId: string) => {
+    const { data } = await supabase
+      .from("submissions")
+      .select("*")
+      .eq("family_id", familyId);
+    setSubs((data ?? []) as Submission[]);
+  };
+
+  useEffect(() => {
+    (async () => {
+      const [{ data: fam }, { data: pr }] = await Promise.all([
+        supabase.from("families").select("*").eq("access_code", code).maybeSingle(),
+        supabase.from("prompts").select("*").order("sort_order"),
+      ]);
+      if (!fam) { setLoading(false); return; }
+      setFamily(fam as Family);
+      setPrompts((pr ?? []) as Prompt[]);
+      await refresh(fam.id);
+      setLoading(false);
+    })();
+  }, [code]);
+
+  const subByPrompt = useMemo(() => {
+    const m = new Map<string, Submission>();
+    subs.forEach((s) => m.set(s.prompt_id, s));
+    return m;
+  }, [subs]);
+
+  const requiredPrompts = prompts.filter((p) => !p.is_bonus);
+  const bonusPrompts = prompts.filter((p) => p.is_bonus);
+  const requiredDone = requiredPrompts.filter((p) => subByPrompt.has(p.id)).length;
+  const allRequiredDone = requiredDone === requiredPrompts.length && requiredPrompts.length > 0;
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!family) {
+    return (
+      <div className="min-h-screen px-5 py-12 text-center">
+        <h1 className="text-2xl font-semibold text-primary">Family not found</h1>
+        <p className="mt-2 text-muted-foreground">Check your code with your group leader.</p>
+        <Link to="/" className="mt-6 inline-block text-primary underline">Back home</Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen px-4 pb-16 pt-6">
+      <div className="mx-auto max-w-md">
+        <header className="text-center">
+          <p className="text-xs uppercase tracking-[0.2em] text-primary/70">The {family.family_name} family</p>
+          <h1 className="mt-1 text-2xl font-semibold text-primary">Temple Trip Hunt</h1>
+        </header>
+
+        <div className="temple-card mt-5 flex items-center justify-between px-5 py-4">
+          <div>
+            <p className="text-sm text-muted-foreground">Required prompts</p>
+            <p className="text-2xl font-semibold text-primary">{requiredDone} of {requiredPrompts.length}</p>
+          </div>
+          <div className="h-12 w-12 rounded-full bg-secondary/60 ring-4 ring-secondary/30 flex items-center justify-center">
+            <span className="text-sm font-semibold text-secondary-foreground">
+              {Math.round((requiredDone / Math.max(requiredPrompts.length, 1)) * 100)}%
+            </span>
+          </div>
+        </div>
+
+        {allRequiredDone && (
+          <div className="temple-card mt-5 border-secondary bg-secondary/30 p-5 text-center">
+            <Sparkles className="mx-auto h-6 w-6 text-primary" />
+            <h2 className="mt-2 font-serif text-xl text-primary">Great job!</h2>
+            <p className="mt-1 text-sm text-foreground">
+              You completed the scavenger hunt. Please return to the gathering spot. If you have time,
+              try the bonus prompts below.
+            </p>
+          </div>
+        )}
+
+        <section className="mt-6 space-y-4">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-primary/70">
+            Required
+          </h2>
+          {requiredPrompts.map((p) => (
+            <PromptCard
+              key={p.id}
+              prompt={p}
+              family={family}
+              submission={subByPrompt.get(p.id)}
+              onChanged={() => refresh(family.id)}
+            />
+          ))}
+        </section>
+
+        {bonusPrompts.length > 0 && (
+          <section className="mt-8 space-y-4">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-primary/70">
+              Bonus
+            </h2>
+            {bonusPrompts.map((p) => (
+              <PromptCard
+                key={p.id}
+                prompt={p}
+                family={family}
+                submission={subByPrompt.get(p.id)}
+                onChanged={() => refresh(family.id)}
+              />
+            ))}
+          </section>
+        )}
+
+        <p className="mt-10 text-center text-xs text-muted-foreground">
+          Photos stay private to this Primary temple trip keepsake.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function PromptCard({
+  prompt,
+  family,
+  submission,
+  onChanged,
+}: {
+  prompt: Prompt;
+  family: Family;
+  submission?: Submission;
+  onChanged: () => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [caption, setCaption] = useState(submission?.caption ?? "");
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setCaption(submission?.caption ?? ""); }, [submission?.id]);
+
+  const handleFile = async (file: File) => {
+    setUploading(true);
+    try {
+      const url = await uploadPhoto(family.id, file);
+      if (submission) {
+        const { error } = await supabase
+          .from("submissions")
+          .update({ photo_url: url, review_status: "pending" })
+          .eq("id", submission.id);
+        if (error) throw error;
+        toast.success("Photo replaced");
+      } else {
+        const { error } = await supabase.from("submissions").insert({
+          family_id: family.id,
+          prompt_id: prompt.id,
+          photo_url: url,
+          caption: caption || null,
+        });
+        if (error) throw error;
+        toast.success("Photo uploaded");
+      }
+      onChanged();
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e.message || "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const saveCaption = async () => {
+    if (!submission) return;
+    await supabase.from("submissions").update({ caption: caption || null }).eq("id", submission.id);
+    toast.success("Saved");
+  };
+
+  const done = !!submission;
+  return (
+    <article className={`temple-card overflow-hidden ${done ? "ring-1 ring-primary/20" : ""}`}>
+      <div className="p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="font-serif text-xl text-primary">{prompt.title}</h3>
+            {prompt.location_category && (
+              <p className="mt-0.5 text-[11px] uppercase tracking-wider text-muted-foreground">
+                {prompt.location_category}
+              </p>
+            )}
+          </div>
+          {done && (
+            <span className="flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+              <Check className="h-3.5 w-3.5" /> Done
+            </span>
+          )}
+        </div>
+        <p className="mt-3 text-sm text-foreground">{prompt.instruction}</p>
+        {prompt.helper_text && (
+          <p className="mt-1.5 text-xs italic text-muted-foreground">{prompt.helper_text}</p>
+        )}
+
+        {submission && (
+          <img
+            src={submission.photo_url}
+            alt={prompt.title}
+            className="mt-4 aspect-[4/3] w-full rounded-lg object-cover"
+          />
+        )}
+
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) handleFile(f);
+            e.target.value = "";
+          }}
+        />
+
+        <div className="mt-4 flex gap-2">
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-60"
+          >
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+            {submission ? "Replace photo" : "Take / upload photo"}
+          </button>
+        </div>
+
+        {submission && (
+          <div className="mt-3">
+            <textarea
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              onBlur={saveCaption}
+              placeholder="Add a short reflection (optional)"
+              rows={2}
+              className="w-full resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
+            />
+          </div>
+        )}
+      </div>
+    </article>
+  );
+}
