@@ -98,7 +98,10 @@ function Review() {
                 >
                   <X className="h-3.5 w-3.5" /> Reject
                 </button>
-                <button onClick={() => remove(s.id)} className="rounded-lg bg-muted p-1.5 text-destructive">
+                <button onClick={() => download(s.photo_url, `${famName(s.family_id)}-${promptTitle(s.prompt_id)}`)} className="rounded-lg bg-muted p-1.5 text-foreground" aria-label="Download">
+                  <Download className="h-3.5 w-3.5" />
+                </button>
+                <button onClick={() => remove(s.id, s.photo_url)} className="rounded-lg bg-muted p-1.5 text-destructive" aria-label="Delete">
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
