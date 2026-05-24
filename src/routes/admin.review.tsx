@@ -41,10 +41,18 @@ function Review() {
     const { error } = await supabase.from("submissions").update(patch).eq("id", id);
     if (error) toast.error(error.message); else { load(); }
   };
-  const remove = async (id: string) => {
-    if (!confirm("Delete this submission?")) return;
-    await supabase.from("submissions").delete().eq("id", id);
+  const remove = async (id: string, url: string) => {
+    if (!confirm("Permanently delete this submission? This removes the photo from storage and any collage.")) return;
+    const path = storagePathFromUrl(url);
+    const { error } = await supabase.from("submissions").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    if (path) await supabase.storage.from("photos").remove([path]);
+    toast.success("Deleted");
     load();
+  };
+  const download = async (url: string, name: string) => {
+    try { await downloadFromUrl(url, `${name.replace(/\s+/g, "-")}.jpg`); }
+    catch (e: any) { toast.error(e.message || "Download failed"); }
   };
 
   return (
