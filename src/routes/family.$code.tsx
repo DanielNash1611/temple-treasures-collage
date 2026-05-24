@@ -2,9 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadPhoto } from "@/lib/storage";
+import { downloadFromUrl, storagePathFromUrl } from "@/lib/collage";
 import type { Family, Prompt, Submission } from "@/lib/types";
 import { toast } from "sonner";
-import { Camera, Check, Loader2, Sparkles } from "lucide-react";
+import { Camera, Check, Download, Loader2, Sparkles, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/family/$code")({ component: FamilyHunt });
 
