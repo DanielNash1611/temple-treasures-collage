@@ -15,6 +15,7 @@ import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as FamilyCodeRouteImport } from './routes/family.$code'
 import { Route as AdminReviewRouteImport } from './routes/admin.review'
 import { Route as AdminFamiliesRouteImport } from './routes/admin.families'
+import { Route as AdminCollagesRouteImport } from './routes/admin.collages'
 
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
@@ -46,10 +47,16 @@ const AdminFamiliesRoute = AdminFamiliesRouteImport.update({
   path: '/families',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminCollagesRoute = AdminCollagesRouteImport.update({
+  id: '/collages',
+  path: '/collages',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/admin/collages': typeof AdminCollagesRoute
   '/admin/families': typeof AdminFamiliesRoute
   '/admin/review': typeof AdminReviewRoute
   '/family/$code': typeof FamilyCodeRoute
@@ -57,6 +64,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin/collages': typeof AdminCollagesRoute
   '/admin/families': typeof AdminFamiliesRoute
   '/admin/review': typeof AdminReviewRoute
   '/family/$code': typeof FamilyCodeRoute
@@ -66,6 +74,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/admin/collages': typeof AdminCollagesRoute
   '/admin/families': typeof AdminFamiliesRoute
   '/admin/review': typeof AdminReviewRoute
   '/family/$code': typeof FamilyCodeRoute
@@ -76,16 +85,24 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/admin/collages'
     | '/admin/families'
     | '/admin/review'
     | '/family/$code'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin/families' | '/admin/review' | '/family/$code' | '/admin'
+  to:
+    | '/'
+    | '/admin/collages'
+    | '/admin/families'
+    | '/admin/review'
+    | '/family/$code'
+    | '/admin'
   id:
     | '__root__'
     | '/'
     | '/admin'
+    | '/admin/collages'
     | '/admin/families'
     | '/admin/review'
     | '/family/$code'
@@ -142,16 +159,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminFamiliesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/collages': {
+      id: '/admin/collages'
+      path: '/collages'
+      fullPath: '/admin/collages'
+      preLoaderRoute: typeof AdminCollagesRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
 interface AdminRouteChildren {
+  AdminCollagesRoute: typeof AdminCollagesRoute
   AdminFamiliesRoute: typeof AdminFamiliesRoute
   AdminReviewRoute: typeof AdminReviewRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminCollagesRoute: AdminCollagesRoute,
   AdminFamiliesRoute: AdminFamiliesRoute,
   AdminReviewRoute: AdminReviewRoute,
   AdminIndexRoute: AdminIndexRoute,
