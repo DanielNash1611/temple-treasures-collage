@@ -13,8 +13,6 @@ function AdminHome() {
 
   useEffect(() => {
     (async () => {
-      // Try to claim admin if none exists (bootstrap)
-      await supabase.rpc("claim_admin_if_none");
       const [{ data: f }, { data: s }, { data: p }] = await Promise.all([
         supabase.from("families").select("*").order("family_name"),
         supabase.from("submissions").select("*"),
