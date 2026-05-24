@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Family, Prompt, ReviewStatus, Submission } from "@/lib/types";
 import { toast } from "sonner";
-import { Check, X, Trash2 } from "lucide-react";
+import { Check, X, Trash2, Download } from "lucide-react";
+import { downloadFromUrl, storagePathFromUrl } from "@/lib/collage";
 
 export const Route = createFileRoute("/admin/review")({ component: Review });
 
