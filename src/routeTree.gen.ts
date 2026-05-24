@@ -9,38 +9,121 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as FamilyCodeRouteImport } from './routes/family.$code'
+import { Route as AdminReviewRouteImport } from './routes/admin.review'
+import { Route as AdminFamiliesRouteImport } from './routes/admin.families'
+import { Route as AdminCollagesRouteImport } from './routes/admin.collages'
 
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const FamilyCodeRoute = FamilyCodeRouteImport.update({
+  id: '/family/$code',
+  path: '/family/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminReviewRoute = AdminReviewRouteImport.update({
+  id: '/review',
+  path: '/review',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminFamiliesRoute = AdminFamiliesRouteImport.update({
+  id: '/families',
+  path: '/families',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCollagesRoute = AdminCollagesRouteImport.update({
+  id: '/collages',
+  path: '/collages',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/admin/collages': typeof AdminCollagesRoute
+  '/admin/families': typeof AdminFamiliesRoute
+  '/admin/review': typeof AdminReviewRoute
+  '/family/$code': typeof FamilyCodeRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin/collages': typeof AdminCollagesRoute
+  '/admin/families': typeof AdminFamiliesRoute
+  '/admin/review': typeof AdminReviewRoute
+  '/family/$code': typeof FamilyCodeRoute
+  '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/admin/collages': typeof AdminCollagesRoute
+  '/admin/families': typeof AdminFamiliesRoute
+  '/admin/review': typeof AdminReviewRoute
+  '/family/$code': typeof FamilyCodeRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/admin/collages'
+    | '/admin/families'
+    | '/admin/review'
+    | '/family/$code'
+    | '/admin/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/admin/collages'
+    | '/admin/families'
+    | '/admin/review'
+    | '/family/$code'
+    | '/admin'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/admin/collages'
+    | '/admin/families'
+    | '/admin/review'
+    | '/family/$code'
+    | '/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRouteWithChildren
+  FamilyCodeRoute: typeof FamilyCodeRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +131,65 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/family/$code': {
+      id: '/family/$code'
+      path: '/family/$code'
+      fullPath: '/family/$code'
+      preLoaderRoute: typeof FamilyCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/review': {
+      id: '/admin/review'
+      path: '/review'
+      fullPath: '/admin/review'
+      preLoaderRoute: typeof AdminReviewRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/families': {
+      id: '/admin/families'
+      path: '/families'
+      fullPath: '/admin/families'
+      preLoaderRoute: typeof AdminFamiliesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/collages': {
+      id: '/admin/collages'
+      path: '/collages'
+      fullPath: '/admin/collages'
+      preLoaderRoute: typeof AdminCollagesRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
+interface AdminRouteChildren {
+  AdminCollagesRoute: typeof AdminCollagesRoute
+  AdminFamiliesRoute: typeof AdminFamiliesRoute
+  AdminReviewRoute: typeof AdminReviewRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminCollagesRoute: AdminCollagesRoute,
+  AdminFamiliesRoute: AdminFamiliesRoute,
+  AdminReviewRoute: AdminReviewRoute,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRouteWithChildren,
+  FamilyCodeRoute: FamilyCodeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
