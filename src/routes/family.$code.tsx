@@ -113,6 +113,64 @@ function FamilyHunt() {
           </div>
         )}
 
+        {(() => {
+          const approvedPhotos = subs
+            .filter((s) => s.review_status === "approved" && s.include_in_family_collage)
+            .map((s) => s.photo_url);
+          const buildOwn = async () => {
+            if (approvedPhotos.length === 0) {
+              toast.error("No approved photos yet. Ask the leader to approve your photos first.");
+              return;
+            }
+            setBuildingCollage(true);
+            try {
+              const blob = await renderFamilyCollage({
+                familyName: family.family_name,
+                photoUrls: approvedPhotos,
+              });
+              downloadBlob(blob, `temple-trip-${family.family_name.replace(/\s+/g, "-")}.png`);
+              toast.success("Collage downloaded!");
+            } catch (e: any) {
+              toast.error(e.message || "Couldn't build collage");
+            } finally {
+              setBuildingCollage(false);
+            }
+          };
+          if (approvedPhotos.length === 0 && !combinedUrl) return null;
+          return (
+            <section className="temple-card mt-5 p-5 space-y-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                <h2 className="font-serif text-lg text-primary">Your keepsakes</h2>
+              </div>
+              {approvedPhotos.length > 0 && (
+                <button
+                  onClick={buildOwn}
+                  disabled={buildingCollage}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-60"
+                >
+                  {buildingCollage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                  Download my family collage
+                </button>
+              )}
+              {combinedUrl && (
+                <button
+                  onClick={async () => {
+                    try { await downloadFromUrl(combinedUrl, "temple-trip-combined.png"); }
+                    catch (e: any) { toast.error(e.message || "Download failed"); }
+                  }}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-secondary px-4 py-2.5 text-sm font-medium text-secondary-foreground"
+                >
+                  <Download className="h-4 w-4" /> Download combined temple collage
+                </button>
+              )}
+              <p className="text-xs text-muted-foreground text-center">
+                Collages use your approved photos. Re-download anytime after new approvals.
+              </p>
+            </section>
+          );
+        })()}
+
         <section className="mt-6 space-y-4">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-primary/70">
             Required
