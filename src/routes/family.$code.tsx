@@ -376,6 +376,68 @@ function PromptCard({
 
 
         {submission && (
+          <div className="mt-3 space-y-2 rounded-lg bg-muted/40 p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Approve for collages
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={async () => {
+                  const next = submission.review_status === "approved" ? "pending" : "approved";
+                  const { error } = await supabase
+                    .from("submissions")
+                    .update({ review_status: next })
+                    .eq("id", submission.id);
+                  if (error) { toast.error(error.message); return; }
+                  toast.success(next === "approved" ? "Approved" : "Approval removed");
+                  onChanged();
+                }}
+                className={`flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium ${
+                  submission.review_status === "approved"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-background text-foreground border border-input"
+                }`}
+              >
+                <Check className="h-3.5 w-3.5" />
+                {submission.review_status === "approved" ? "Approved" : "Approve photo"}
+              </button>
+            </div>
+            <div className="grid grid-cols-1 gap-1.5 text-xs">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={submission.include_in_family_collage}
+                  onChange={async (e) => {
+                    const { error } = await supabase
+                      .from("submissions")
+                      .update({ include_in_family_collage: e.target.checked })
+                      .eq("id", submission.id);
+                    if (error) { toast.error(error.message); return; }
+                    onChanged();
+                  }}
+                />
+                Use in our family collage
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={submission.include_in_combined_collage}
+                  onChange={async (e) => {
+                    const { error } = await supabase
+                      .from("submissions")
+                      .update({ include_in_combined_collage: e.target.checked })
+                      .eq("id", submission.id);
+                    if (error) { toast.error(error.message); return; }
+                    onChanged();
+                  }}
+                />
+                Use in combined temple collage
+              </label>
+            </div>
+          </div>
+        )}
+
+        {submission && (
           <div className="mt-3">
             <textarea
               value={caption}
