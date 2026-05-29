@@ -298,7 +298,7 @@ function PromptCard({
         )}
 
         <input
-          ref={fileRef}
+          ref={cameraRef}
           type="file"
           accept="image/*"
           capture="environment"
@@ -309,16 +309,37 @@ function PromptCard({
             e.target.value = "";
           }}
         />
+        <input
+          ref={uploadRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) handleFile(f);
+            e.target.value = "";
+          }}
+        />
 
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-4 grid grid-cols-2 gap-2">
           <button
-            onClick={() => fileRef.current?.click()}
+            onClick={() => cameraRef.current?.click()}
             disabled={uploading}
-            className="flex flex-1 min-w-[160px] items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-60"
           >
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-            {submission ? "Replace" : "Take / upload photo"}
+            {submission ? "Retake" : "Camera"}
           </button>
+          <button
+            onClick={() => uploadRef.current?.click()}
+            disabled={uploading}
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-secondary px-3 py-2.5 text-sm font-medium text-secondary-foreground disabled:opacity-60"
+          >
+            <ImageIcon className="h-4 w-4" />
+            {submission ? "Replace from library" : "Upload from library"}
+          </button>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-2">
           {submission && (
             <>
               <button
@@ -327,7 +348,7 @@ function PromptCard({
                     await downloadFromUrl(submission.photo_url, `${prompt.title.replace(/\s+/g, "-")}.jpg`);
                   } catch (e: any) { toast.error(e.message || "Download failed"); }
                 }}
-                className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-secondary px-3 py-2.5 text-sm font-medium text-secondary-foreground"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-muted px-3 py-2 text-sm font-medium text-foreground"
                 aria-label="Download photo"
               >
                 <Download className="h-4 w-4" /> Download
