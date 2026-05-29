@@ -463,13 +463,13 @@ export async function renderCombinedCollage(
   // Angel Moroni topper above spire — use real Moroni artwork
   try {
     const moroni = await loadImage(moroniUrl);
-    const mh = 220;
+    const mh = 110;
     const mw = moroni.width * (mh / moroni.height);
     // Anchor the base of the statue (ball pedestal) on the spire tip
     ctx.save();
     ctx.shadowColor = "rgba(184,151,95,0.45)";
-    ctx.shadowBlur = 18;
-    ctx.drawImage(moroni, tipX - mw / 2, tipY - mh + 10, mw, mh);
+    ctx.shadowBlur = 12;
+    ctx.drawImage(moroni, tipX - mw / 2, tipY - mh + 6, mw, mh);
     ctx.restore();
   } catch {
     drawMoroni(ctx, tipX, tipY - 50, 70);
