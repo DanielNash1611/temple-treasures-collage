@@ -36,7 +36,7 @@ function Welcome() {
           <img
             src={moroniLogo}
             alt="Angel Moroni"
-            className="mx-auto h-28 w-auto drop-shadow-[0_4px_12px_rgba(184,151,95,0.35)]"
+            className="mx-auto h-20 w-auto drop-shadow-[0_4px_12px_rgba(184,151,95,0.35)]"
           />
           <p className="mt-3 text-sm uppercase tracking-[0.2em] text-primary/80">Primary</p>
           <h1 className="mt-2 text-4xl font-semibold text-primary">Temple Trip Scavenger Hunt</h1>
