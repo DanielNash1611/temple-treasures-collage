@@ -465,11 +465,13 @@ export async function renderCombinedCollage(
     const moroni = await loadImage(moroniUrl);
     const mh = 110;
     const mw = moroni.width * (mh / moroni.height);
-    // Anchor the base of the statue (ball pedestal) on the spire tip
+    // The trumpet extends to the right, so the body's horizontal center
+    // sits left of the image's geometric center. Shift right to align body.
+    const bodyOffset = mw * 0.03; // ~32/1024 of source width
     ctx.save();
     ctx.shadowColor = "rgba(184,151,95,0.45)";
     ctx.shadowBlur = 12;
-    ctx.drawImage(moroni, tipX - mw / 2, tipY - mh + 6, mw, mh);
+    ctx.drawImage(moroni, tipX - mw / 2 + bodyOffset, tipY - mh + 6, mw, mh);
     ctx.restore();
   } catch {
     drawMoroni(ctx, tipX, tipY - 50, 70);
