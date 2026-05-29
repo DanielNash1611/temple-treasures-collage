@@ -224,7 +224,8 @@ function PromptCard({
 }) {
   const [uploading, setUploading] = useState(false);
   const [caption, setCaption] = useState(submission?.caption ?? "");
-  const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const uploadRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { setCaption(submission?.caption ?? ""); }, [submission?.id]);
 
