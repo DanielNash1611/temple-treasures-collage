@@ -111,41 +111,69 @@ export async function renderFamilyCollage(opts: {
   const gw = gridRight - gridLeft;
   const gh = gridBottom - gridTop;
 
-  const photos = opts.photoUrls.slice(0, 10);
+  const photos = opts.photoUrls.slice(0, 12);
   const imgs = await Promise.all(photos.map((u) => loadImage(u).catch(() => null)));
   const valid = imgs.filter((i): i is HTMLImageElement => !!i);
 
-  const n = valid.length;
-  let cols = 2, rows = Math.ceil(n / 2);
-  if (n >= 7) { cols = 3; rows = Math.ceil(n / 3); }
-  if (n <= 3) { cols = 1; rows = n; }
-  if (n === 4) { cols = 2; rows = 2; }
-  if (n === 0) {
+  if (valid.length === 0) {
     ctx.fillStyle = SLATE;
     ctx.font = "500 22px Inter, sans-serif";
     ctx.fillText("No approved photos yet.", W / 2, gridTop + gh / 2);
   } else {
-    const gap = 18;
-    const cw = (gw - gap * (cols - 1)) / cols;
-    const ch = (gh - gap * (rows - 1)) / rows;
-    valid.forEach((img, i) => {
-      const cIdx = i % cols;
-      const rIdx = Math.floor(i / cols);
-      const x = gridLeft + cIdx * (cw + gap);
-      const y = gridTop + rIdx * (ch + gap);
-      ctx.save();
-      ctx.shadowColor = "rgba(58,61,64,0.25)";
-      ctx.shadowBlur = 14;
-      ctx.shadowOffsetY = 4;
-      ctx.fillStyle = CREAM;
-      roundRect(ctx, x, y, cw, ch, 14);
-      ctx.fill();
-      ctx.restore();
-      ctx.save();
-      roundRect(ctx, x + 8, y + 8, cw - 16, ch - 16, 10);
-      ctx.clip();
-      drawImageCover(ctx, img, x + 8, y + 8, cw - 16, ch - 16);
-      ctx.restore();
+    // Justified-rows layout: respects each photo's true aspect ratio so
+    // selfies (vertical), landscapes (horizontal), and squares all fit.
+    const gap = 16;
+    // Pick target row height so total rows roughly fill the area.
+    const ars = valid.map((i) => i.width / i.height);
+    const avgAr = ars.reduce((a, b) => a + b, 0) / ars.length;
+    const targetRowH = Math.max(220, Math.min(420, Math.sqrt((gw * gh) / valid.length / avgAr)));
+
+    // Greedy pack: add images to a row until total scaled width >= gw.
+    type Row = { items: HTMLImageElement[]; ars: number[] };
+    const rows: Row[] = [];
+    let cur: Row = { items: [], ars: [] };
+    valid.forEach((img) => {
+      cur.items.push(img); cur.ars.push(img.width / img.height);
+      const arSum = cur.ars.reduce((a, b) => a + b, 0);
+      const rowW = arSum * targetRowH + gap * (cur.items.length - 1);
+      if (rowW >= gw * 0.95) { rows.push(cur); cur = { items: [], ars: [] }; }
+    });
+    if (cur.items.length) rows.push(cur);
+
+    // Compute each row height to exactly fill gw (last row capped).
+    let y = gridTop;
+    rows.forEach((row, idx) => {
+      const arSum = row.ars.reduce((a, b) => a + b, 0);
+      const available = gw - gap * (row.items.length - 1);
+      let h = available / arSum;
+      const isLast = idx === rows.length - 1;
+      if (isLast) h = Math.min(h, targetRowH * 1.15);
+      if (y + h > gridBottom) h = gridBottom - y;
+      if (h <= 0) return;
+      let x = gridLeft;
+      // Center last row if it doesn't fill width
+      if (isLast) {
+        const usedW = arSum * h + gap * (row.items.length - 1);
+        if (usedW < gw) x = gridLeft + (gw - usedW) / 2;
+      }
+      row.items.forEach((img, i) => {
+        const w = row.ars[i] * h;
+        ctx.save();
+        ctx.shadowColor = "rgba(58,61,64,0.25)";
+        ctx.shadowBlur = 14;
+        ctx.shadowOffsetY = 4;
+        ctx.fillStyle = CREAM;
+        roundRect(ctx, x, y, w, h, 14);
+        ctx.fill();
+        ctx.restore();
+        ctx.save();
+        roundRect(ctx, x + 6, y + 6, w - 12, h - 12, 10);
+        ctx.clip();
+        drawImageCover(ctx, img, x + 6, y + 6, w - 12, h - 12);
+        ctx.restore();
+        x += w + gap;
+      });
+      y += h + gap;
     });
   }
 

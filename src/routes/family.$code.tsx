@@ -2,10 +2,15 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadPhoto } from "@/lib/storage";
-import { downloadFromUrl, storagePathFromUrl } from "@/lib/collage";
+import {
+  downloadFromUrl,
+  storagePathFromUrl,
+  renderFamilyCollage,
+  downloadBlob,
+} from "@/lib/collage";
 import type { Family, Prompt, Submission } from "@/lib/types";
 import { toast } from "sonner";
-import { Camera, Check, Download, Loader2, Sparkles, Trash2 } from "lucide-react";
+import { Camera, Check, Download, Image as ImageIcon, Loader2, Sparkles, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/family/$code")({ component: FamilyHunt });
 
@@ -15,6 +20,8 @@ function FamilyHunt() {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [subs, setSubs] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [combinedUrl, setCombinedUrl] = useState<string | null>(null);
+  const [buildingCollage, setBuildingCollage] = useState(false);
 
   const refresh = async (familyId: string) => {
     const { data } = await supabase
@@ -26,13 +33,21 @@ function FamilyHunt() {
 
   useEffect(() => {
     (async () => {
-      const [{ data: fam }, { data: pr }] = await Promise.all([
+      const [{ data: fam }, { data: pr }, { data: combined }] = await Promise.all([
         supabase.from("families").select("*").eq("access_code", code).maybeSingle(),
         supabase.from("prompts").select("*").order("sort_order"),
+        supabase
+          .from("collages")
+          .select("collage_url,updated_at")
+          .eq("type", "combined")
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
       ]);
       if (!fam) { setLoading(false); return; }
       setFamily(fam as Family);
       setPrompts((pr ?? []) as Prompt[]);
+      setCombinedUrl(combined?.collage_url ?? null);
       await refresh(fam.id);
       setLoading(false);
     })();
@@ -98,6 +113,64 @@ function FamilyHunt() {
           </div>
         )}
 
+        {(() => {
+          const approvedPhotos = subs
+            .filter((s) => s.review_status === "approved" && s.include_in_family_collage)
+            .map((s) => s.photo_url);
+          const buildOwn = async () => {
+            if (approvedPhotos.length === 0) {
+              toast.error("No approved photos yet. Ask the leader to approve your photos first.");
+              return;
+            }
+            setBuildingCollage(true);
+            try {
+              const blob = await renderFamilyCollage({
+                familyName: family.family_name,
+                photoUrls: approvedPhotos,
+              });
+              downloadBlob(blob, `temple-trip-${family.family_name.replace(/\s+/g, "-")}.png`);
+              toast.success("Collage downloaded!");
+            } catch (e: any) {
+              toast.error(e.message || "Couldn't build collage");
+            } finally {
+              setBuildingCollage(false);
+            }
+          };
+          if (approvedPhotos.length === 0 && !combinedUrl) return null;
+          return (
+            <section className="temple-card mt-5 p-5 space-y-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                <h2 className="font-serif text-lg text-primary">Your keepsakes</h2>
+              </div>
+              {approvedPhotos.length > 0 && (
+                <button
+                  onClick={buildOwn}
+                  disabled={buildingCollage}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-60"
+                >
+                  {buildingCollage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                  Download my family collage
+                </button>
+              )}
+              {combinedUrl && (
+                <button
+                  onClick={async () => {
+                    try { await downloadFromUrl(combinedUrl, "temple-trip-combined.png"); }
+                    catch (e: any) { toast.error(e.message || "Download failed"); }
+                  }}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-secondary px-4 py-2.5 text-sm font-medium text-secondary-foreground"
+                >
+                  <Download className="h-4 w-4" /> Download combined temple collage
+                </button>
+              )}
+              <p className="text-xs text-muted-foreground text-center">
+                Collages use your approved photos. Re-download anytime after new approvals.
+              </p>
+            </section>
+          );
+        })()}
+
         <section className="mt-6 space-y-4">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-primary/70">
             Required
@@ -151,7 +224,8 @@ function PromptCard({
 }) {
   const [uploading, setUploading] = useState(false);
   const [caption, setCaption] = useState(submission?.caption ?? "");
-  const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const uploadRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { setCaption(submission?.caption ?? ""); }, [submission?.id]);
 
@@ -224,7 +298,7 @@ function PromptCard({
         )}
 
         <input
-          ref={fileRef}
+          ref={cameraRef}
           type="file"
           accept="image/*"
           capture="environment"
@@ -235,16 +309,37 @@ function PromptCard({
             e.target.value = "";
           }}
         />
+        <input
+          ref={uploadRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) handleFile(f);
+            e.target.value = "";
+          }}
+        />
 
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-4 grid grid-cols-2 gap-2">
           <button
-            onClick={() => fileRef.current?.click()}
+            onClick={() => cameraRef.current?.click()}
             disabled={uploading}
-            className="flex flex-1 min-w-[160px] items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-60"
           >
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-            {submission ? "Replace" : "Take / upload photo"}
+            {submission ? "Retake" : "Camera"}
           </button>
+          <button
+            onClick={() => uploadRef.current?.click()}
+            disabled={uploading}
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-secondary px-3 py-2.5 text-sm font-medium text-secondary-foreground disabled:opacity-60"
+          >
+            <ImageIcon className="h-4 w-4" />
+            {submission ? "Replace from library" : "Upload from library"}
+          </button>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-2">
           {submission && (
             <>
               <button
@@ -253,7 +348,7 @@ function PromptCard({
                     await downloadFromUrl(submission.photo_url, `${prompt.title.replace(/\s+/g, "-")}.jpg`);
                   } catch (e: any) { toast.error(e.message || "Download failed"); }
                 }}
-                className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-secondary px-3 py-2.5 text-sm font-medium text-secondary-foreground"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-muted px-3 py-2 text-sm font-medium text-foreground"
                 aria-label="Download photo"
               >
                 <Download className="h-4 w-4" /> Download
