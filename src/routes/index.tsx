@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import moroniLogo from "@/assets/moroni.png";
 
 export const Route = createFileRoute("/")({ component: Welcome });
 
@@ -32,7 +33,12 @@ function Welcome() {
     <div className="min-h-screen px-5 py-10">
       <div className="mx-auto max-w-md">
         <div className="text-center">
-          <p className="text-sm uppercase tracking-[0.2em] text-primary/80">Primary</p>
+          <img
+            src={moroniLogo}
+            alt="Angel Moroni"
+            className="mx-auto h-28 w-auto drop-shadow-[0_4px_12px_rgba(184,151,95,0.35)]"
+          />
+          <p className="mt-3 text-sm uppercase tracking-[0.2em] text-primary/80">Primary</p>
           <h1 className="mt-2 text-4xl font-semibold text-primary">Temple Trip Scavenger Hunt</h1>
           <p className="mt-3 text-base text-muted-foreground">
             Work together as a family to notice sacred, peaceful, and beautiful things around the

@@ -1,5 +1,6 @@
 // Collage generation utilities — pure canvas, no external deps.
 // LA Temple silhouette + optional reference-image-derived mask.
+import moroniUrl from "@/assets/moroni.png";
 
 export async function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -459,8 +460,20 @@ export async function renderCombinedCollage(
   const tipX = left + (tipC + 0.5) * tile;
   const tipY = top + tipR * tile;
 
-  // Angel Moroni topper above spire
-  drawMoroni(ctx, tipX, tipY - 50, 70);
+  // Angel Moroni topper above spire — use real Moroni artwork
+  try {
+    const moroni = await loadImage(moroniUrl);
+    const mh = 220;
+    const mw = moroni.width * (mh / moroni.height);
+    // Anchor the base of the statue (ball pedestal) on the spire tip
+    ctx.save();
+    ctx.shadowColor = "rgba(184,151,95,0.45)";
+    ctx.shadowBlur = 18;
+    ctx.drawImage(moroni, tipX - mw / 2, tipY - mh + 10, mw, mh);
+    ctx.restore();
+  } catch {
+    drawMoroni(ctx, tipX, tipY - 50, 70);
+  }
 
   // Footer ornament
   drawOrnament(ctx, W / 2, H - 50, 200);

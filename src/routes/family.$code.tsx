@@ -12,6 +12,8 @@ import type { Family, Prompt, Submission } from "@/lib/types";
 import { toast } from "sonner";
 import { Camera, Check, Download, Image as ImageIcon, Loader2, Sparkles, Trash2 } from "lucide-react";
 
+import moroniLogo from "@/assets/moroni.png";
+
 export const Route = createFileRoute("/family/$code")({ component: FamilyHunt });
 
 function FamilyHunt() {
@@ -86,7 +88,12 @@ function FamilyHunt() {
     <div className="min-h-screen px-4 pb-16 pt-6">
       <div className="mx-auto max-w-md">
         <header className="text-center">
-          <p className="text-xs uppercase tracking-[0.2em] text-primary/70">The {family.family_name} family</p>
+          <img
+            src={moroniLogo}
+            alt="Angel Moroni"
+            className="mx-auto h-20 w-auto drop-shadow-[0_4px_10px_rgba(184,151,95,0.35)]"
+          />
+          <p className="mt-2 text-xs uppercase tracking-[0.2em] text-primary/70">The {family.family_name} family</p>
           <h1 className="mt-1 text-2xl font-semibold text-primary">Temple Trip Hunt</h1>
         </header>
 
