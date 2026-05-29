@@ -20,6 +20,8 @@ function FamilyHunt() {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [subs, setSubs] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [combinedUrl, setCombinedUrl] = useState<string | null>(null);
+  const [buildingCollage, setBuildingCollage] = useState(false);
 
   const refresh = async (familyId: string) => {
     const { data } = await supabase
@@ -31,13 +33,21 @@ function FamilyHunt() {
 
   useEffect(() => {
     (async () => {
-      const [{ data: fam }, { data: pr }] = await Promise.all([
+      const [{ data: fam }, { data: pr }, { data: combined }] = await Promise.all([
         supabase.from("families").select("*").eq("access_code", code).maybeSingle(),
         supabase.from("prompts").select("*").order("sort_order"),
+        supabase
+          .from("collages")
+          .select("collage_url,updated_at")
+          .eq("type", "combined")
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
       ]);
       if (!fam) { setLoading(false); return; }
       setFamily(fam as Family);
       setPrompts((pr ?? []) as Prompt[]);
+      setCombinedUrl(combined?.collage_url ?? null);
       await refresh(fam.id);
       setLoading(false);
     })();
