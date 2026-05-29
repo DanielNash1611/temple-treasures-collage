@@ -1,5 +1,6 @@
 // Collage generation utilities — pure canvas, no external deps.
 // LA Temple silhouette + optional reference-image-derived mask.
+import moroniUrl from "@/assets/moroni.png";
 
 export async function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
