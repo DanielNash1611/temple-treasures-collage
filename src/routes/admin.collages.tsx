@@ -53,6 +53,23 @@ function Collages() {
       });
       setPreview(URL.createObjectURL(blob));
       downloadBlob(blob, "temple-trip-combined.png");
+
+      // Share with families: upload to storage and upsert collages row.
+      try {
+        const path = `collages/combined-${Date.now()}.png`;
+        const { error: upErr } = await supabase.storage
+          .from("photos")
+          .upload(path, blob, { contentType: "image/png", upsert: true });
+        if (upErr) throw upErr;
+        const { data: pub } = supabase.storage.from("photos").getPublicUrl(path);
+        await supabase.from("collages").insert({
+          type: "combined",
+          collage_url: pub.publicUrl,
+        });
+        toast.success("Combined collage shared with families.");
+      } catch (e: any) {
+        toast.error(`Saved locally, but couldn't share: ${e.message}`);
+      }
     } catch (e: any) { toast.error(e.message); }
     finally { setBusy(null); }
   };
