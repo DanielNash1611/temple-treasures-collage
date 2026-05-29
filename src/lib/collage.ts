@@ -457,7 +457,7 @@ export async function renderCombinedCollage(
       if (mask[r * cols + c]) { tipR = r; tipC = c; r = rows; break; }
     }
   }
-  const tipX = left + (tipC + 0.5) * tile;
+  const tipX = left + tw / 2;
   const tipY = top + tipR * tile;
 
   // Angel Moroni topper above spire — use real Moroni artwork
