@@ -16,13 +16,9 @@ function Welcome() {
     const trimmed = code.trim().toUpperCase();
     if (!trimmed) return;
     setLoading(true);
-    const { data, error } = await supabase
-      .from("families")
-      .select("access_code")
-      .eq("access_code", trimmed)
-      .maybeSingle();
+    const { data, error } = await supabase.rpc("get_family_by_code", { _code: trimmed });
     setLoading(false);
-    if (error || !data) {
+    if (error || !data || (Array.isArray(data) && data.length === 0)) {
       toast.error("That code doesn't match a family. Double-check with your group leader.");
       return;
     }
