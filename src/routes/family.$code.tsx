@@ -243,18 +243,19 @@ function PromptCard({
     try {
       const url = await uploadPhoto(family.id, file);
       if (submission) {
-        const { error } = await supabase
-          .from("submissions")
-          .update({ photo_url: url, review_status: "pending" })
-          .eq("id", submission.id);
+        const { error } = await supabase.rpc("update_family_submission", {
+          _code: family.access_code,
+          _submission_id: submission.id,
+          _patch: { photo_url: url, review_status: "pending" },
+        });
         if (error) throw error;
         toast.success("Photo replaced");
       } else {
-        const { error } = await supabase.from("submissions").insert({
-          family_id: family.id,
-          prompt_id: prompt.id,
-          photo_url: url,
-          caption: caption || null,
+        const { error } = await supabase.rpc("create_family_submission", {
+          _code: family.access_code,
+          _prompt_id: prompt.id,
+          _photo_url: url,
+          _caption: caption || null,
         });
         if (error) throw error;
         toast.success("Photo uploaded");
@@ -270,7 +271,11 @@ function PromptCard({
 
   const saveCaption = async () => {
     if (!submission) return;
-    await supabase.from("submissions").update({ caption: caption || null }).eq("id", submission.id);
+    await supabase.rpc("update_family_submission", {
+      _code: family.access_code,
+      _submission_id: submission.id,
+      _patch: { caption: caption || "" },
+    });
     toast.success("Saved");
   };
 
