@@ -35,8 +35,8 @@ function FamilyHunt() {
 
   useEffect(() => {
     (async () => {
-      const [{ data: fam }, { data: pr }, { data: combined }] = await Promise.all([
-        supabase.from("families").select("*").eq("access_code", code).maybeSingle(),
+      const [{ data: famRows }, { data: pr }, { data: combined }] = await Promise.all([
+        supabase.rpc("get_family_by_code", { _code: code }),
         supabase.from("prompts").select("*").order("sort_order"),
         supabase
           .from("collages")
@@ -46,8 +46,10 @@ function FamilyHunt() {
           .limit(1)
           .maybeSingle(),
       ]);
+      const fam = Array.isArray(famRows) ? famRows[0] : famRows;
       if (!fam) { setLoading(false); return; }
-      setFamily(fam as Family);
+      const famWithCode: Family = { id: fam.id, family_name: fam.family_name, access_code: code, created_at: "" };
+      setFamily(famWithCode);
       setPrompts((pr ?? []) as Prompt[]);
       setCombinedUrl(combined?.collage_url ?? null);
       await refresh(fam.id);
