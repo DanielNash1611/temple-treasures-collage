@@ -371,10 +371,11 @@ function PromptCard({
                 onClick={async () => {
                   if (!confirm(`Delete the photo for "${prompt.title}"? This can't be undone.`)) return;
                   try {
-                    const path = storagePathFromUrl(submission.photo_url);
-                    const { error } = await supabase.from("submissions").delete().eq("id", submission.id);
+                    const { error } = await supabase.rpc("delete_family_submission", {
+                      _code: family.access_code,
+                      _submission_id: submission.id,
+                    });
                     if (error) throw error;
-                    if (path) await supabase.storage.from("photos").remove([path]);
                     toast.success("Photo deleted");
                     onChanged();
                   } catch (e: any) { toast.error(e.message || "Delete failed"); }
