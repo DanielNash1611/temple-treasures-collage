@@ -255,7 +255,7 @@ function PromptCard({
           _code: family.access_code,
           _prompt_id: prompt.id,
           _photo_url: url,
-          _caption: caption || null,
+          _caption: caption || undefined,
         });
         if (error) throw error;
         toast.success("Photo uploaded");
