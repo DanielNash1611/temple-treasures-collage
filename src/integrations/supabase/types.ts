@@ -183,12 +183,68 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_family_submission: {
+        Args: {
+          _caption?: string
+          _code: string
+          _photo_url: string
+          _prompt_id: string
+        }
+        Returns: {
+          caption: string | null
+          created_at: string
+          family_id: string
+          id: string
+          include_in_combined_collage: boolean
+          include_in_family_collage: boolean
+          photo_url: string
+          prompt_id: string
+          review_status: Database["public"]["Enums"]["review_status"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "submissions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      delete_family_submission: {
+        Args: { _code: string; _submission_id: string }
+        Returns: undefined
+      }
+      get_family_by_code: {
+        Args: { _code: string }
+        Returns: {
+          family_name: string
+          id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      update_family_submission: {
+        Args: { _code: string; _patch: Json; _submission_id: string }
+        Returns: {
+          caption: string | null
+          created_at: string
+          family_id: string
+          id: string
+          include_in_combined_collage: boolean
+          include_in_family_collage: boolean
+          photo_url: string
+          prompt_id: string
+          review_status: Database["public"]["Enums"]["review_status"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "submissions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
     }
     Enums: {

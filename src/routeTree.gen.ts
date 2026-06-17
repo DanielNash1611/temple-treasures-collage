@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
@@ -17,6 +18,11 @@ import { Route as AdminReviewRouteImport } from './routes/admin.review'
 import { Route as AdminFamiliesRouteImport } from './routes/admin.families'
 import { Route as AdminCollagesRouteImport } from './routes/admin.collages'
 
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -56,6 +62,7 @@ const AdminCollagesRoute = AdminCollagesRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/privacy': typeof PrivacyRoute
   '/admin/collages': typeof AdminCollagesRoute
   '/admin/families': typeof AdminFamiliesRoute
   '/admin/review': typeof AdminReviewRoute
@@ -64,6 +71,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/privacy': typeof PrivacyRoute
   '/admin/collages': typeof AdminCollagesRoute
   '/admin/families': typeof AdminFamiliesRoute
   '/admin/review': typeof AdminReviewRoute
@@ -74,6 +82,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/privacy': typeof PrivacyRoute
   '/admin/collages': typeof AdminCollagesRoute
   '/admin/families': typeof AdminFamiliesRoute
   '/admin/review': typeof AdminReviewRoute
@@ -85,6 +94,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/privacy'
     | '/admin/collages'
     | '/admin/families'
     | '/admin/review'
@@ -93,6 +103,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/privacy'
     | '/admin/collages'
     | '/admin/families'
     | '/admin/review'
@@ -102,6 +113,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/privacy'
     | '/admin/collages'
     | '/admin/families'
     | '/admin/review'
@@ -112,11 +124,19 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
+  PrivacyRoute: typeof PrivacyRoute
   FamilyCodeRoute: typeof FamilyCodeRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin': {
       id: '/admin'
       path: '/admin'
@@ -188,6 +208,7 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
+  PrivacyRoute: PrivacyRoute,
   FamilyCodeRoute: FamilyCodeRoute,
 }
 export const routeTree = rootRouteImport

@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { uploadPhoto } from "@/lib/storage";
 import {
   downloadFromUrl,
-  storagePathFromUrl,
   renderFamilyCollage,
   downloadBlob,
 } from "@/lib/collage";
@@ -35,8 +34,8 @@ function FamilyHunt() {
 
   useEffect(() => {
     (async () => {
-      const [{ data: fam }, { data: pr }, { data: combined }] = await Promise.all([
-        supabase.from("families").select("*").eq("access_code", code).maybeSingle(),
+      const [{ data: famRows }, { data: pr }, { data: combined }] = await Promise.all([
+        supabase.rpc("get_family_by_code", { _code: code }),
         supabase.from("prompts").select("*").order("sort_order"),
         supabase
           .from("collages")
@@ -46,8 +45,10 @@ function FamilyHunt() {
           .limit(1)
           .maybeSingle(),
       ]);
+      const fam = Array.isArray(famRows) ? famRows[0] : famRows;
       if (!fam) { setLoading(false); return; }
-      setFamily(fam as Family);
+      const famWithCode: Family = { id: fam.id, family_name: fam.family_name, access_code: code, created_at: "" };
+      setFamily(famWithCode);
       setPrompts((pr ?? []) as Prompt[]);
       setCombinedUrl(combined?.collage_url ?? null);
       await refresh(fam.id);
@@ -241,18 +242,19 @@ function PromptCard({
     try {
       const url = await uploadPhoto(family.id, file);
       if (submission) {
-        const { error } = await supabase
-          .from("submissions")
-          .update({ photo_url: url, review_status: "pending" })
-          .eq("id", submission.id);
+        const { error } = await supabase.rpc("update_family_submission", {
+          _code: family.access_code,
+          _submission_id: submission.id,
+          _patch: { photo_url: url, review_status: "pending" },
+        });
         if (error) throw error;
         toast.success("Photo replaced");
       } else {
-        const { error } = await supabase.from("submissions").insert({
-          family_id: family.id,
-          prompt_id: prompt.id,
-          photo_url: url,
-          caption: caption || null,
+        const { error } = await supabase.rpc("create_family_submission", {
+          _code: family.access_code,
+          _prompt_id: prompt.id,
+          _photo_url: url,
+          _caption: caption || undefined,
         });
         if (error) throw error;
         toast.success("Photo uploaded");
@@ -268,7 +270,11 @@ function PromptCard({
 
   const saveCaption = async () => {
     if (!submission) return;
-    await supabase.from("submissions").update({ caption: caption || null }).eq("id", submission.id);
+    await supabase.rpc("update_family_submission", {
+      _code: family.access_code,
+      _submission_id: submission.id,
+      _patch: { caption: caption || "" },
+    });
     toast.success("Saved");
   };
 
@@ -364,10 +370,11 @@ function PromptCard({
                 onClick={async () => {
                   if (!confirm(`Delete the photo for "${prompt.title}"? This can't be undone.`)) return;
                   try {
-                    const path = storagePathFromUrl(submission.photo_url);
-                    const { error } = await supabase.from("submissions").delete().eq("id", submission.id);
+                    const { error } = await supabase.rpc("delete_family_submission", {
+                      _code: family.access_code,
+                      _submission_id: submission.id,
+                    });
                     if (error) throw error;
-                    if (path) await supabase.storage.from("photos").remove([path]);
                     toast.success("Photo deleted");
                     onChanged();
                   } catch (e: any) { toast.error(e.message || "Delete failed"); }
@@ -391,10 +398,11 @@ function PromptCard({
               <button
                 onClick={async () => {
                   const next = submission.review_status === "approved" ? "pending" : "approved";
-                  const { error } = await supabase
-                    .from("submissions")
-                    .update({ review_status: next })
-                    .eq("id", submission.id);
+                  const { error } = await supabase.rpc("update_family_submission", {
+                    _code: family.access_code,
+                    _submission_id: submission.id,
+                    _patch: { review_status: next },
+                  });
                   if (error) { toast.error(error.message); return; }
                   toast.success(next === "approved" ? "Approved" : "Approval removed");
                   onChanged();
@@ -415,10 +423,11 @@ function PromptCard({
                   type="checkbox"
                   checked={submission.include_in_family_collage}
                   onChange={async (e) => {
-                    const { error } = await supabase
-                      .from("submissions")
-                      .update({ include_in_family_collage: e.target.checked })
-                      .eq("id", submission.id);
+                    const { error } = await supabase.rpc("update_family_submission", {
+                      _code: family.access_code,
+                      _submission_id: submission.id,
+                      _patch: { include_in_family_collage: e.target.checked },
+                    });
                     if (error) { toast.error(error.message); return; }
                     onChanged();
                   }}
@@ -430,10 +439,11 @@ function PromptCard({
                   type="checkbox"
                   checked={submission.include_in_combined_collage}
                   onChange={async (e) => {
-                    const { error } = await supabase
-                      .from("submissions")
-                      .update({ include_in_combined_collage: e.target.checked })
-                      .eq("id", submission.id);
+                    const { error } = await supabase.rpc("update_family_submission", {
+                      _code: family.access_code,
+                      _submission_id: submission.id,
+                      _patch: { include_in_combined_collage: e.target.checked },
+                    });
                     if (error) { toast.error(error.message); return; }
                     onChanged();
                   }}
