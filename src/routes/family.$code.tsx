@@ -399,10 +399,11 @@ function PromptCard({
               <button
                 onClick={async () => {
                   const next = submission.review_status === "approved" ? "pending" : "approved";
-                  const { error } = await supabase
-                    .from("submissions")
-                    .update({ review_status: next })
-                    .eq("id", submission.id);
+                  const { error } = await supabase.rpc("update_family_submission", {
+                    _code: family.access_code,
+                    _submission_id: submission.id,
+                    _patch: { review_status: next },
+                  });
                   if (error) { toast.error(error.message); return; }
                   toast.success(next === "approved" ? "Approved" : "Approval removed");
                   onChanged();
@@ -423,10 +424,11 @@ function PromptCard({
                   type="checkbox"
                   checked={submission.include_in_family_collage}
                   onChange={async (e) => {
-                    const { error } = await supabase
-                      .from("submissions")
-                      .update({ include_in_family_collage: e.target.checked })
-                      .eq("id", submission.id);
+                    const { error } = await supabase.rpc("update_family_submission", {
+                      _code: family.access_code,
+                      _submission_id: submission.id,
+                      _patch: { include_in_family_collage: e.target.checked },
+                    });
                     if (error) { toast.error(error.message); return; }
                     onChanged();
                   }}
@@ -438,10 +440,11 @@ function PromptCard({
                   type="checkbox"
                   checked={submission.include_in_combined_collage}
                   onChange={async (e) => {
-                    const { error } = await supabase
-                      .from("submissions")
-                      .update({ include_in_combined_collage: e.target.checked })
-                      .eq("id", submission.id);
+                    const { error } = await supabase.rpc("update_family_submission", {
+                      _code: family.access_code,
+                      _submission_id: submission.id,
+                      _patch: { include_in_combined_collage: e.target.checked },
+                    });
                     if (error) { toast.error(error.message); return; }
                     onChanged();
                   }}
