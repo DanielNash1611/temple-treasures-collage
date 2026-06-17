@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { uploadPhoto } from "@/lib/storage";
 import {
   downloadFromUrl,
-  storagePathFromUrl,
   renderFamilyCollage,
   downloadBlob,
 } from "@/lib/collage";
